@@ -17,6 +17,6 @@ pip install -r requirements.txt
 ## Helpful snippets
 
 ```bash
-pip install tqdm pandas ccxt
+pip install ipykernel tqdm pandas ccxt 
 pip list --format=freeze > requirements.txt
 ```
