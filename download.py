@@ -7,6 +7,7 @@ from tqdm import tqdm
 import pandas as pd
 import ccxt
 
+# TODO move this to config
 download_folder = "data_raw"
 os.makedirs(download_folder, exist_ok=True)
 
@@ -15,11 +16,13 @@ symbols = [
     'ETH/BTC', 'BNB/BTC', 'XRP/BTC', 'ADA/BTC'
 ]
 
+default_timeframe = "1m"
+
 exchange = ccxt.binance()
 
-def get_ohlcv_filename(symbol: str, timeframe: str):
-    # TODO use path module
-    return f"data_raw/ohlcv_{symbol.replace('/', '_')}_{timeframe}.pkl"
+def get_ohlcv_filename(symbol: str, timeframe = default_timeframe):
+    return f"ohlcv_{symbol.replace('/', '_')}_{timeframe}.pkl"
+
 
 # lock for printing without text overlapping in a single line in multiprocessing
 lock = multiprocessing.Lock()
@@ -31,7 +34,7 @@ def print_with_lock(text):
 # TODO check if this works without this position variable
 position = 0
 
-def get_symbol_data(symbol, timeframe, since = 0):
+def get_symbol_data(symbol, timeframe = default_timeframe, since = 0):
     
     time.sleep(1)
 
@@ -68,36 +71,35 @@ def get_symbol_data(symbol, timeframe, since = 0):
     return pd.DataFrame(candles, columns=columns)
 
 
-def download_or_update_symbol_data(symbol, timeframe = "1m"):
+def download_or_update_symbol_data(symbol, timeframe = default_timeframe):
     
     filename = get_ohlcv_filename(symbol, timeframe)
+    filepath = os.path.join(download_folder, filename)
     
     try:
         
-        df = pd.read_pickle(filename)
+        df = pd.read_pickle(filepath)
         
-        print_with_lock(f"File {filename} found. Updating...")
+        print_with_lock(f"File {filepath} found. Updating...")
         since = df["timestamp"].iloc[-1] + 1
         
         df_new = get_symbol_data(symbol, timeframe, since)
         if df_new.shape[0] > 0:
             df = pd.concat([df, df_new], ignore_index = True)
-            df.to_pickle(filename)
+            df.to_pickle(filepath)
         
     except FileNotFoundError:
         
-        print_with_lock(f"File {filename} not found. Downloading...")
+        print_with_lock(f"File {filepath} not found. Downloading...")
         df = get_symbol_data(symbol, timeframe)
-        df.to_pickle(filename)
+        df.to_pickle(filepath)
         
     return df
 
 
-def main():
-    # TODO should multiproccessing be used here? maybe threading since it's mostly IO bound
+def run():
     with multiprocessing.Pool(processes=len(symbols)) as pool:
-        for _ in pool.map(download_or_update_symbol_data, symbols):
-            pass
+        pool.map(download_or_update_symbol_data, symbols)
 
 if __name__ == "__main__":
-    main()
+    run()
