@@ -1,17 +1,31 @@
 # algo-trading-simulations
 
+Python scripts for downloading historic cryptocurrency data and running backtests on them.
 
-## Initiate environment and install dependencies
+## Init
 
-### Create and activate conda env
+Create and activate conda env
 ```bash
 conda create --name ats python=3.11
 conda activate ats
 ```
 
-### Install requirements
+Install requirements
 ```bash
 pip install -r requirements.txt
+```
+
+## Usage
+
+```python
+import ccxt
+
+from OHLCV import OHLCV
+
+exchange = ccxt.binance()
+ohclv = OHLCV(exchange)
+
+df = ohclv.get_df("BTC/USDT", "1m", update = True)
 ```
 
 ## Helpful snippets
