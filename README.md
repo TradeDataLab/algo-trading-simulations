@@ -17,6 +17,7 @@ pip install -r requirements.txt
 ## Helpful snippets
 
 ```bash
-pip install ipykernel tqdm pandas ccxt 
+pip install ipykernel tqdm pandas ccxt pandas_ta ta
+pip install matplotlib plotly
 pip list --format=freeze > requirements.txt
 ```
