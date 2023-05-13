@@ -23,9 +23,9 @@ import ccxt
 from OHLCV import OHLCV
 
 exchange = ccxt.binance()
-ohclv = OHLCV(exchange)
+ohlcv = OHLCV(exchange)
 
-df = ohclv.get_df("BTC/USDT", "1m", update = True)
+df = ohlcv.get_df("BTC/USDT", "1m", update = True)
 ```
 
 ## Helpful snippets

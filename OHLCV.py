@@ -1,7 +1,7 @@
-import random
 import time
 import multiprocessing
 import os
+from functools import partial
 
 from tqdm import tqdm
 import pandas as pd
@@ -14,17 +14,17 @@ data_folder = "data"
 default_timeframe = "1m"
 
 class OHLCV:
-    def __init__(self, exchange):
+    def __init__(self, exchange: ccxt.Exchange):
         self.exchange = exchange
         self.columns = ["timestamp", "open", "high", "low", "close", "volume"]
         
         os.makedirs(download_folder, exist_ok=True)
         os.makedirs(data_folder, exist_ok=True)
     
-    def get_filename(self, symbol, timeframe):
+    def get_filename(self, symbol: str, timeframe: str) -> str:
         return f"ohlcv_{symbol.replace('/', '_')}_{timeframe}.pkl"
     
-    def fetch(self, symbol, timeframe, since = 0):
+    def fetch(self, symbol: str, timeframe: str, since = 0) -> pd.DataFrame:
         pbar = tqdm(desc = f"Downloading {symbol:>8}")
     
         candles = []
@@ -54,7 +54,7 @@ class OHLCV:
             
         return pd.DataFrame(candles, columns=self.columns)
 
-    def download_or_update_symbol_data(self, symbol, timeframe):
+    def download_or_update_symbol_data(self, symbol: str, timeframe: str) -> None:
         
         filename = self.get_filename(symbol, timeframe)
         filepath = os.path.join(download_folder, filename)
@@ -63,7 +63,7 @@ class OHLCV:
             
             df = pd.read_pickle(filepath)
             
-            print(f"File {filepath} found. Updating...")
+            # print(f"File {filepath} found. Updating...")
             since = df["timestamp"].iloc[-1] + 1
             
             df_new = self.fetch(symbol, timeframe, since)
@@ -73,11 +73,11 @@ class OHLCV:
             
         except FileNotFoundError:
             
-            print(f"File {filepath} not found. Downloading...")
+            # print(f"File {filepath} not found. Downloading...")
             df = self.fetch(symbol, timeframe)
             df.to_pickle(filepath)
     
-    def clean(self, symbol, timeframe):
+    def clean(self, symbol: str, timeframe: str) -> None:
         
         infile = os.path.join(download_folder, self.get_filename(symbol, timeframe))
         outfile = os.path.join(data_folder, self.get_filename(symbol, timeframe))
@@ -101,7 +101,18 @@ class OHLCV:
         
         df.to_pickle(outfile)
         
-    def get_df(self, symbol, timeframe, update = False):
+    def process_symbol(self, symbol: str, timeframe: str) -> None:
+        self.download_or_update_symbol_data(symbol, timeframe)
+        self.clean(symbol, timeframe)
+        
+    def process_symbols(self, symbols: str, timeframe: str = default_timeframe) -> None:
+        # partial because multiprocessing.Pool.map only accepts functions with one argument
+        with multiprocessing.Pool(processes=len(symbols)) as pool:
+            func = partial(self.process_symbol, timeframe=timeframe)
+            pool.map(func, symbols)
+        
+    # fetches data from file if it exists, otherwise downloads it
+    def get_df(self, symbol: str, timeframe: str = default_timeframe, update: bool = False) -> pd.DataFrame:
         
         filename = self.get_filename(symbol, timeframe)
         filepath = os.path.join(data_folder, filename)
