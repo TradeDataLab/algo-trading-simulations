@@ -5,6 +5,8 @@ from tqdm import tqdm
 import ccxt
 import pandas as pd
 
+from ta.utils import dropna
+
 from settings import DOWNLOAD_FOLDER, DATA_FOLDER
 
 class OHLCV:
@@ -22,14 +24,11 @@ class OHLCV:
         self.timeframe = timeframe
         
         self.filename = f"ohlcv_{self.symbol.replace('/', '_')}_{self.timeframe}.pkl"
-        self.filepath_raw = os.path.join(DOWNLOAD_FOLDER, self.filename)
-        self.filepath_clean = os.path.join(DATA_FOLDER, self.filename)
+        self.filepath = os.path.join(DOWNLOAD_FOLDER, self.filename)
         
-        if not os.path.isfile(self.filepath_clean):
-            print(f"File {self.filepath_clean} not found. Downloading...")
+        if not os.path.isfile(self.filepath):
+            print(f"File {self.filepath} not found. Downloading...")
             self.__update()
-        
-        self.data = self.get_data(update=False)
         
     def __fetch_candles(self, since: int = 0) -> list:
         """Fetches candles from exchange.
@@ -81,7 +80,7 @@ class OHLCV:
         
         try:
             
-            df = pd.read_pickle(self.filepath_raw)
+            df = pd.read_pickle(self.filepath)
             
             # print(f"File {filepath} found. Updating...")
             since = df["timestamp"].iloc[-1] + 1
@@ -90,36 +89,41 @@ class OHLCV:
             df_new = self.__parse_candles(candles)
             if df_new.shape[0] > 0:
                 df = pd.concat([df, df_new], ignore_index = True)
-                df.to_pickle(self.filepath_raw)
+                df.to_pickle(self.filepath)
             
         except FileNotFoundError:
             
             # print(f"File {filepath} not found. Downloading...")
             candles = self.__fetch_candles()
             df = self.__parse_candles(candles)
-            df.to_pickle(self.filepath_raw)
-            
-        self.__clean()
+            df.to_pickle(self.filepath)
     
-    def __clean(self) -> None:
-        """Reads raw data, removes duplicate rows and saves the cleaned data."""
-        
-        df = pd.read_pickle(self.filepath_raw)
+    # @staticmethod
+    # def __clean(df: pd.DataFrame) -> pd.DataFrame:
+    #     """Reads raw data, removes duplicate rows and saves the cleaned data."""
 
-        # Create a boolean mask to identify neighboring duplicate rows.
-        # This filters out periods od time where no trades were made, due to exchange being down.
-        # Can't use `drop_duplicates` as it would also detect duplicates across different time periods.
-        not_time_columns = ['open', 'high', 'low', 'close', 'volume']
-        mask = (df[not_time_columns] == df[not_time_columns].shift()).all(axis=1)
+    #     # Create a boolean mask to identify neighboring duplicate rows.
+    #     # This filters out periods od time where no trades were made, due to exchange being down.
+    #     # Can't use `drop_duplicates` as it would also detect duplicates across different time periods.
+    #     not_time_columns = ['open', 'high', 'low', 'close', 'volume']
+    #     mask = (df[not_time_columns] == df[not_time_columns].shift()).all(axis=1)
 
-        # apply the mask and reset index
-        df = df[(~mask)].reset_index(drop=True)
+    #     # apply the mask and reset index
+    #     df = df[(~mask)].reset_index(drop=True)
         
-        # TODO convert timestamp to datetime and set as index depending on requirements of used backtesting library
+    #     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+    #     df.set_index('timestamp', inplace=True)
+        
+    #     return df
+    
+    @staticmethod
+    def __clean(df: pd.DataFrame) -> pd.DataFrame:
+        
+        df = dropna(df)
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
         df.set_index('timestamp', inplace=True)
         
-        df.to_pickle(self.filepath_clean)
+        return df
     
     def get_data(self, update: bool = False) -> pd.DataFrame:
         """Returns the cleaned data.
@@ -134,6 +138,7 @@ class OHLCV:
         if update:
             self.__update()
         
-        df = pd.read_pickle(self.filepath_clean)
+        df = pd.read_pickle(self.filepath)
+        df = self.__clean(df)
         
         return df
