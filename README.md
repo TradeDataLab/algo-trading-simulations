@@ -31,7 +31,6 @@ df = ohlcv.get_data(update=True)
 ## Helpful snippets
 
 ```bash
-pip install ipykernel tqdm pandas ccxt pandas_ta ta
-pip install matplotlib plotly
+pip install ipykernel tqdm pandas ccxt pandas_ta ta backtesting matplotlib plotly
 pip list --format=freeze > requirements.txt
 ```
