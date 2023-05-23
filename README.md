@@ -7,12 +7,13 @@ Used libraries:
 - [pandas_ta](https://github.com/twopirllc/pandas-ta)
 - [ta](https://github.com/bukosabino/ta)
 - [backtesting](https://github.com/kernc/backtesting.py)
+- [vectorbt](https://github.com/polakowo/vectorbt)
 
 ## Init
 
 Create and activate conda env
 ```bash
-conda create --name ats python=3.11
+conda create --name ats python=3.10
 conda activate ats
 ```
 
@@ -37,6 +38,6 @@ df = ohlcv.get_data(update=True)
 ## Helpful snippets
 
 ```bash
-pip install ipykernel tqdm pandas ccxt pandas_ta ta backtesting matplotlib plotly
+pip install ipykernel numpy pandas ccxt tqdm pandas_ta ta backtesting vectorbt matplotlib plotly seaborn
 pip list --format=freeze > requirements.txt
 ```
