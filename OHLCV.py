@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import itertools
 import multiprocessing
 
 from tqdm import tqdm
@@ -9,16 +10,17 @@ import pandas as pd
 
 from ta.utils import dropna
 
-from settings import DOWNLOAD_FOLDER, symbols
+from settings import DOWNLOAD_FOLDER, symbols, timeframes
 
 class OHLCV:
-    def __init__(self, exchange: ccxt.Exchange, symbol: str, timeframe: str):
+    def __init__(self, exchange: ccxt.Exchange, symbol: str, timeframe: str, update: bool = False):
         """OHLCV data handler.
         
         Args:
             exchange (ccxt.Exchange): ccxt exchange object.
             symbol (str): symbol to fetch.
-            timeframe (str): timeframe to fetch. 
+            timeframe (str): timeframe to fetch.
+            update (bool, optional): whether to update the data. Defaults to False. 
         """
         
         self.exchange = exchange
@@ -27,6 +29,9 @@ class OHLCV:
         
         self.filename = f"ohlcv_{self.symbol.replace('/', '_')}_{self.timeframe}.pkl"
         self.filepath = os.path.join(DOWNLOAD_FOLDER, self.filename)
+
+        if update:
+            self.update()
 
     def __fetch_ohlcv(self, since: int = 0) -> list:
         
@@ -53,7 +58,7 @@ class OHLCV:
     
         candles = []
         
-        with tqdm(desc = f"Fetching {self.symbol:>9} candles") as pbar:
+        with tqdm(desc = f"Fetching {self.symbol:>9} {self.timeframe:>3} candles") as pbar:
 
             while True:
 
@@ -138,10 +143,8 @@ class OHLCV:
 if __name__ == "__main__":
     
     exchange = ccxt.binance()
-    timeframe = "1m"
 
-    def update_symbol(symbol):
-        OHLCV(exchange, symbol, timeframe).update()
+    args = list(itertools.product([exchange], symbols, timeframes, [True]))
     
-    with multiprocessing.Pool() as pool:
-        pool.map(update_symbol, symbols)
+    with multiprocessing.Pool(len(args)) as pool:
+        pool.starmap(OHLCV, args)
